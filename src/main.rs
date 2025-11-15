@@ -25,24 +25,6 @@ use crate::direction::Direction;
 use crate::pt::Pt;
 use crate::scaffold::Scaffold;
 
-macro_rules! sdbg {
-    ($s:expr, $val:expr) => {
-        match $val {
-            tmp => {
-                $s += &format!(
-                    "[{}:{}:{}] {} = {:#?}\n",
-                    std::file!(),
-                    std::line!(),
-                    std::column!(),
-                    std::stringify!($val),
-                    &tmp
-                );
-                tmp
-            }
-        }
-    };
-}
-
 fn main() -> Result<()> {
     let r = Scaffold::new(std::io::stdout())
         .layer(|_| Ok(()), |s| s.flush())
@@ -76,36 +58,24 @@ fn main_raw_mode(stdout: &mut Stdout) -> Result<()> {
     let mut blanks: BTreeSet<Pt> = buf.area().points().collect();
     let mut sprouts: Vec<Pt> = vec![];
 
-    let mut dbglog = "".to_string();
-
     buf.redraw_screen(stdout)?;
     while !event::poll(params::INTERVAL)? && !blanks.is_empty() {
-        if dbglog.lines().count() > 15 {
-            return Err(std::io::Error::other(dbglog));
-        }
-
         let pt: Pt = until_some::<_, Pt>(|| {
             let denom = u32::try_from(sprouts.len()).unwrap() + 1;
-            sdbg!(dbglog, denom);
             let gen_sprout = rng.random_ratio(1, denom);
-            sdbg!(dbglog, gen_sprout);
             if gen_sprout {
                 // Generate a seed:
                 let newsprout = *blanks.iter().choose(&mut rng).unwrap();
-                sdbg!(dbglog, newsprout);
                 sprouts.push(newsprout);
                 Some(newsprout)
             } else {
                 // Attempt to grow a sprout:
                 let sprix = rng.random_range(..sprouts.len());
-                sdbg!(dbglog, sprix);
-                sdbg!(dbglog, sprouts[sprix]);
                 if let Some(pt) = buf.area().clip(sprouts[sprix] + rng.random::<Direction>()) {
-                    sdbg!(dbglog, pt);
                     sprouts[sprix] = pt;
                     Some(pt)
                 } else {
-                    sdbg!(dbglog, None)
+                    None
                 }
             }
         });
