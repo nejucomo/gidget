@@ -11,6 +11,10 @@ impl Pt {
         usize::from(x) * usize::from(y)
     }
 
+    pub fn iter_area(self) -> impl Iterator<Item = Pt> {
+        (0..self.area()).map(move |ix| self.ix_to_pt(ix))
+    }
+
     pub fn ix_to_pt(self, ix: usize) -> Pt {
         let Pt(w, h) = self;
         let col = ix % usize::from(w);
@@ -18,9 +22,28 @@ impl Pt {
         (col, row).try_into().unwrap()
     }
 
+    pub fn pt_to_ix(self, pt: Pt) -> usize {
+        let (w, _): (usize, usize) = self.into();
+        let (col, row): (usize, usize) = pt.into();
+        row * w + col
+    }
+
+    pub fn clip(self, area: Pt) -> Option<Pt> {
+        let Pt(x, y) = self;
+        let Pt(w, h) = area;
+        if x < w && y < h { Some(self) } else { None }
+    }
+
     pub fn move_to(self) -> MoveTo {
         let Pt(x, y) = self;
         MoveTo(x, y)
+    }
+}
+
+impl From<Pt> for (usize, usize) {
+    fn from(pt: Pt) -> Self {
+        let Pt(x, y) = pt;
+        (usize::from(x), usize::from(y))
     }
 }
 

@@ -7,5 +7,6 @@ edition = "2024"
 crossterm = "0.29.0"
 derive-new = "0.7.0"
 derive_more = { version = "2.0.1", features = ["from", "into", "try_from"] }
+itertools = "0.14.0"
 rand = "0.9.2"
 unicode-box-drawing = "0.2.1"
