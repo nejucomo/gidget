@@ -24,6 +24,7 @@ impl Area {
         x * y
     }
 
+    #[allow(dead_code)]
     pub fn points(self) -> impl Iterator<Item = Pt> {
         (0..self.cell_count()).map(move |ix| self.ix_to_pt(ix))
     }
