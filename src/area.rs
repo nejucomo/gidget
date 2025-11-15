@@ -1,29 +1,25 @@
+use derive_more::From;
+use derive_new::new;
+
 use crate::pt::Pt;
 
-#[derive(Copy, Clone, Debug)]
-pub struct Area(Pt);
-
-impl From<(u16, u16)> for Area {
-    fn from((w, h): (u16, u16)) -> Self {
-        Area::new(w, h)
-    }
+#[derive(Copy, Clone, Debug, From, new)]
+pub struct Area {
+    width: u16,
+    height: u16,
 }
 
 impl Area {
-    pub fn new(w: u16, h: u16) -> Self {
-        Area(Pt::new(w, h))
-    }
-
     pub fn width(self) -> u16 {
-        self.0.col()
+        self.width
     }
 
     pub fn height(self) -> u16 {
-        self.0.row()
+        self.height
     }
 
     pub fn cell_count(self) -> usize {
-        let (x, y) = self.0.usizes();
+        let (x, y) = self.usizes();
         x * y
     }
 
@@ -32,16 +28,16 @@ impl Area {
     }
 
     pub fn ix_to_pt(self, ix: usize) -> Pt {
-        let (w, _) = self.0.usizes();
+        let (w, _) = self.usizes();
         let col = ix % w;
         let row = ix / w;
         (col, row).try_into().unwrap()
     }
 
     pub fn pt_to_ix(self, pt: Pt) -> usize {
-        let (w, _) = self.0.usizes();
-        let (col, row) = pt.usizes();
-        row * w + col
+        let (w, _) = self.usizes();
+        let (col, row) = pt.into();
+        usize::from(row) * w + usize::from(col)
     }
 
     pub fn clip(self, opt: Option<Pt>) -> Option<Pt> {
@@ -52,5 +48,10 @@ impl Area {
                 None
             }
         })
+    }
+
+    fn usizes(self) -> (usize, usize) {
+        let Area { width, height } = self;
+        (usize::from(width), usize::from(height))
     }
 }

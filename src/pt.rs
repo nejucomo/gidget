@@ -20,11 +20,6 @@ impl Pt {
         self.row
     }
 
-    pub fn usizes(self) -> (usize, usize) {
-        let Pt { col, row } = self;
-        (usize::from(col), usize::from(row))
-    }
-
     pub fn move_to(self) -> MoveTo {
         let Pt { col, row } = self;
         MoveTo(col, row)
