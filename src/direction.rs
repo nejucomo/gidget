@@ -42,13 +42,12 @@ impl Add<Direction> for Pt {
     type Output = Option<Pt>;
 
     fn add(self, dir: Direction) -> Self::Output {
-        let Pt(x, y) = self;
-        let (optx, opty) = match dir {
-            Up => (Some(x), y.checked_sub(1)),
-            Down => (Some(x), y.checked_add(1)),
-            Left => (x.checked_sub(1), Some(y)),
-            Right => (x.checked_add(1), Some(y)),
+        let (optcol, optrow) = match dir {
+            Up => (Some(self.col()), self.row().checked_sub(1)),
+            Down => (Some(self.col()), self.row().checked_add(1)),
+            Left => (self.col().checked_sub(1), Some(self.row())),
+            Right => (self.col().checked_add(1), Some(self.row())),
         };
-        optx.zip(opty).map(Pt::from)
+        optcol.zip(optrow).map(Pt::from)
     }
 }

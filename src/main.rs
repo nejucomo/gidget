@@ -1,3 +1,4 @@
+mod area;
 mod boxchar;
 mod buffer;
 mod cell;
@@ -72,7 +73,7 @@ fn main_raw_mode(stdout: &mut Stdout) -> Result<()> {
     let mut rng = rand::rng();
     let mut buf = Buffer::new(terminal::size()?);
 
-    let mut blanks: BTreeSet<Pt> = buf.size().iter_area().collect();
+    let mut blanks: BTreeSet<Pt> = buf.area().points().collect();
     let mut sprouts: Vec<Pt> = vec![];
 
     let mut dbglog = "".to_string();
@@ -99,9 +100,7 @@ fn main_raw_mode(stdout: &mut Stdout) -> Result<()> {
                 let sprix = rng.random_range(..sprouts.len());
                 sdbg!(dbglog, sprix);
                 sdbg!(dbglog, sprouts[sprix]);
-                if let Some(pt) =
-                    (sprouts[sprix] + rng.random::<Direction>()).and_then(|pt| buf.size().clip(pt))
-                {
+                if let Some(pt) = buf.area().clip(sprouts[sprix] + rng.random::<Direction>()) {
                     sdbg!(dbglog, pt);
                     sprouts[sprix] = pt;
                     Some(pt)

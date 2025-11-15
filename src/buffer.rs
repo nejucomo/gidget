@@ -4,6 +4,7 @@ use std::ops::{Index, IndexMut};
 use crossterm::QueueableCommand as _;
 use crossterm::terminal::{Clear, ClearType::All};
 
+use crate::area::Area;
 use crate::cell::Cell;
 use crate::constraints::Constraints;
 use crate::direction::Direction;
@@ -11,26 +12,26 @@ use crate::pt::Pt;
 
 #[derive(Debug)]
 pub struct Buffer {
-    size: Pt,
+    area: Area,
     cells: Vec<Cell>,
 }
 
 impl Buffer {
-    pub fn new<V: Into<Pt>>(size: V) -> Self {
-        let size = size.into();
+    pub fn new<V: Into<Area>>(area: V) -> Self {
+        let area = area.into();
         Buffer {
-            size,
-            cells: vec![Cell::default(); size.area()],
+            area,
+            cells: vec![Cell::default(); area.cell_count()],
         }
     }
 
     // Accessors
-    pub fn size(&self) -> Pt {
-        self.size
+    pub fn area(&self) -> Area {
+        self.area
     }
 
     pub fn iter(&self) -> impl Iterator<Item = (Pt, Cell)> {
-        let size = self.size;
+        let size = self.area;
         self.cells
             .iter()
             .enumerate()
@@ -43,7 +44,7 @@ impl Buffer {
         let mut cons = Constraints::default();
 
         for dir in Direction::each() {
-            if let Some(neighbor) = (pt + dir).and_then(|pt| self.size.clip(pt)) {
+            if let Some(neighbor) = self.area().clip(pt + dir) {
                 cons[dir] = self[neighbor].width(dir.opposite());
             }
         }
@@ -57,10 +58,10 @@ impl Buffer {
 
         let mut lastrow = None;
         for (pt, c) in self.iter() {
-            if lastrow != Some(pt.1) {
+            if lastrow != Some(pt.row()) {
                 // First column on this row; move cursor:
                 stdout.queue(pt.move_to())?;
-                lastrow = Some(pt.1);
+                lastrow = Some(pt.row());
             }
             stdout.queue(c.print_styled_content())?;
         }
@@ -73,12 +74,12 @@ impl Index<Pt> for Buffer {
     type Output = Cell;
 
     fn index(&self, pt: Pt) -> &Self::Output {
-        &self.cells[self.size.pt_to_ix(pt)]
+        &self.cells[self.area.pt_to_ix(pt)]
     }
 }
 
 impl IndexMut<Pt> for Buffer {
     fn index_mut(&mut self, pt: Pt) -> &mut Self::Output {
-        &mut self.cells[self.size.pt_to_ix(pt)]
+        &mut self.cells[self.area.pt_to_ix(pt)]
     }
 }
