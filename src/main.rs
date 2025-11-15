@@ -4,20 +4,23 @@ mod cell;
 mod constraints;
 mod direction;
 mod dirpack;
+mod params;
 mod pt;
 mod scaffold;
 
+use std::collections::VecDeque;
 use std::io::{Result, Stdout, Write as _};
-use std::time::Duration;
 
 use crossterm::terminal::{
     self, EnterAlternateScreen, LeaveAlternateScreen, disable_raw_mode, enable_raw_mode,
 };
 use crossterm::{QueueableCommand as _, event};
+use rand::distr::{Bernoulli, Distribution as _};
 use rand::seq::SliceRandom as _;
 
 use crate::buffer::Buffer;
 use crate::cell::Cell;
+use crate::params::NEW_SEED_PROBABILITY;
 use crate::pt::Pt;
 use crate::scaffold::Scaffold;
 
@@ -39,16 +42,28 @@ fn main() -> Result<()> {
 }
 
 fn raw_mode_main(stdout: &mut Stdout) -> Result<()> {
+    let seedcoin = Bernoulli::new(NEW_SEED_PROBABILITY).unwrap();
     let mut rng = rand::rng();
     let mut buf = Buffer::new(terminal::size()?);
 
-    let mut blanks: Vec<Pt> = buf.size().iter_area().collect();
-    blanks.shuffle(&mut rng);
+    let mut blanks = VecDeque::from({
+        let mut v: Vec<Pt> = buf.size().iter_area().collect();
+        v.shuffle(&mut rng);
+        v
+    });
+    let mut first = true;
 
     buf.redraw_screen(stdout)?;
-    while !event::poll(Duration::from_millis(10))? {
-        if let Some(pt) = blanks.pop() {
+    while !event::poll(params::INTERVAL)? {
+        if let Some(pt) = blanks.pop_front() {
             let constraints = buf.get_constraints(pt);
+            if !(first || constraints.is_constrained() || seedcoin.sample(&mut rng)) {
+                // We should not create a new seed:
+                blanks.push_back(pt);
+                continue;
+            }
+            first = false;
+
             let cell = Cell::from(constraints.random_boxchar(&mut rng));
             buf[pt] = cell;
 
