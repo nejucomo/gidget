@@ -58,34 +58,38 @@ fn main_raw_mode(stdout: &mut Stdout) -> Result<()> {
     let mut q: Vec<Pt> = vec![rng.sample(buf.area())];
 
     buf.redraw_screen(stdout)?;
-    while !event::poll(params::INTERVAL)? && !q.is_empty() {
-        let pt = q.swap_remove(rng.random_range(0..q.len()));
+    while !event::poll(params::INTERVAL)? {
+        if !q.is_empty() {
+            let pt = q.swap_remove(rng.random_range(0..q.len()));
 
-        if buf[pt].is_empty() {
-            // queue up all it's neighbors:
-            q.extend(Direction::each().filter_map(|d| buf.area().clip(pt + d)));
+            if buf[pt].is_empty() {
+                // queue up all it's neighbors:
+                q.extend(Direction::each().filter_map(|d| buf.area().clip(pt + d)));
 
-            let constraints = buf.get_constraints(pt);
-            let cell = Cell::from(constraints.random_boxchar(&mut rng));
-            buf[pt] = cell;
+                let constraints = buf.get_constraints(pt);
+                let cell = Cell::from(constraints.random_boxchar(&mut rng));
+                buf[pt] = cell;
 
-            stdout
-                .queue(pt.move_to())?
-                .queue(cell.print_styled_content())?
-                .flush()?;
-        }
+                stdout
+                    .queue(pt.move_to())?
+                    .queue(cell.print_styled_content())?
+                    .flush()?;
+            }
 
-        if rng.random_ratio(1, seeds) {
-            // plant a new seed:
-            q.push(
-                buf.area()
+            if rng.random_ratio(1, seeds) {
+                // plant a new seed:
+                if let Some(pt) = buf
+                    .area()
                     .points()
                     .filter(|&pt| buf[pt].is_empty())
                     .choose(&mut rng)
-                    .unwrap(),
-            );
-
-            seeds += 1;
+                {
+                    q.push(pt);
+                    seeds += 1;
+                } else {
+                    assert!(q.is_empty());
+                }
+            }
         }
     }
 
