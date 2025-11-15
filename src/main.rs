@@ -80,15 +80,16 @@ fn main_raw_mode(stdout: &mut Stdout) -> Result<()> {
             }
         });
 
-        assert!(blanks.remove(&pt));
-        let constraints = buf.get_constraints(pt);
-        let cell = Cell::from(constraints.random_boxchar(&mut rng));
-        buf[pt] = cell;
+        if blanks.remove(&pt) {
+            let constraints = buf.get_constraints(pt);
+            let cell = Cell::from(constraints.random_boxchar(&mut rng));
+            buf[pt] = cell;
 
-        stdout
-            .queue(pt.move_to())?
-            .queue(cell.print_styled_content())?
-            .flush()?;
+            stdout
+                .queue(pt.move_to())?
+                .queue(cell.print_styled_content())?
+                .flush()?;
+        }
     }
 
     Ok(())
