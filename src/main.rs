@@ -15,7 +15,7 @@ use std::io::{Result, Stdout, Write as _};
 use crossterm::terminal::{
     self, EnterAlternateScreen, LeaveAlternateScreen, disable_raw_mode, enable_raw_mode,
 };
-use crossterm::{QueueableCommand as _, event};
+use crossterm::{QueueableCommand as _, cursor, event};
 use rand::Rng as _;
 use rand::seq::IteratorRandom as _;
 
@@ -34,8 +34,8 @@ fn main() -> Result<()> {
             |s| s.queue(LeaveAlternateScreen).map(|_| ()),
         )
         .layer(
-            |s| s.queue(EnterAlternateScreen).map(|_| ()),
-            |s| s.queue(LeaveAlternateScreen).map(|_| ()),
+            |s| s.queue(cursor::Hide).map(|_| ()),
+            |s| s.queue(cursor::Show).map(|_| ()),
         )
         .call(main_raw_mode);
 
