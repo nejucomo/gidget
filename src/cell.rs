@@ -25,7 +25,7 @@ impl Cell {
     fn styled_content(self) -> StyledContent<char> {
         match self.0 {
             Some(bc) => bc.char().dark_blue().on_black(),
-            None => '▒'.dark_magenta().dim(),
+            None => '▒'.grey().dim(),
         }
     }
 }

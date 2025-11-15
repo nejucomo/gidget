@@ -29,7 +29,7 @@ impl Constraints {
             })
             .multi_cartesian_product()
             .map(|edges| {
-                let mut bc = BoxChar::default();
+                let mut bc = BoxChar::new(rng.random_ratio(11, 13));
                 for (d, w) in edges {
                     bc[d] = w;
                 }

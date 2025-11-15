@@ -79,15 +79,13 @@ fn main_raw_mode(stdout: &mut Stdout) -> Result<()> {
             if rng.random_ratio(1, seeds) {
                 // plant a new seed:
                 if let Some(pt) = buf
-                    .area()
-                    .points()
-                    .filter(|&pt| buf[pt].is_empty())
+                    .iter()
+                    .filter(|(_, c)| c.is_empty())
+                    .map(|(pt, _)| pt)
                     .choose(&mut rng)
                 {
                     q.push(pt);
                     seeds += 1;
-                } else {
-                    assert!(q.is_empty());
                 }
             }
         }
