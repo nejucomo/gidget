@@ -46,7 +46,7 @@ fn raw_mode_main(stdout: &mut Stdout) -> Result<()> {
     blanks.shuffle(&mut rng);
 
     buf.redraw_screen(stdout)?;
-    while !event::poll(Duration::from_millis(100))? {
+    while !event::poll(Duration::from_millis(10))? {
         if let Some(pt) = blanks.pop() {
             let constraints = buf.get_constraints(pt);
             let cell = Cell::from(constraints.random_boxchar(&mut rng));
