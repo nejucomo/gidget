@@ -43,7 +43,7 @@ impl Buffer {
         let mut cons = Constraints::default();
 
         for dir in Direction::each() {
-            if let Some(neighbor) = pt + dir {
+            if let Some(neighbor) = (pt + dir).and_then(|pt| self.size.clip(pt)) {
                 cons[dir] = self[neighbor].width(dir.opposite());
             }
         }
