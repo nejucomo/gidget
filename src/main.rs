@@ -9,7 +9,6 @@ mod params;
 mod pt;
 mod scaffold;
 
-use std::collections::BTreeSet;
 use std::io::{Result, Stdout, Write as _};
 
 use crossterm::terminal::{
@@ -55,32 +54,17 @@ fn main_raw_mode(stdout: &mut Stdout) -> Result<()> {
     let mut rng = rand::rng();
     let mut buf = Buffer::new(terminal::size()?);
 
-    let mut blanks: BTreeSet<Pt> = buf.area().points().collect();
-    let mut sprouts: Vec<Pt> = vec![];
+    let mut seeds = 1;
+    let mut q: Vec<Pt> = vec![rng.sample(buf.area())];
 
     buf.redraw_screen(stdout)?;
-    while !event::poll(params::INTERVAL)? && !blanks.is_empty() {
-        let pt: Pt = until_some::<_, Pt>(|| {
-            let denom = u32::try_from(sprouts.len()).unwrap() + 1;
-            let gen_sprout = rng.random_ratio(1, denom);
-            if gen_sprout {
-                // Generate a seed:
-                let newsprout = *blanks.iter().choose(&mut rng).unwrap();
-                sprouts.push(newsprout);
-                Some(newsprout)
-            } else {
-                // Attempt to grow a sprout:
-                let sprix = rng.random_range(..sprouts.len());
-                if let Some(pt) = buf.area().clip(sprouts[sprix] + rng.random::<Direction>()) {
-                    sprouts[sprix] = pt;
-                    Some(pt)
-                } else {
-                    None
-                }
-            }
-        });
+    while !event::poll(params::INTERVAL)? && !q.is_empty() {
+        let pt = q.swap_remove(rng.random_range(0..q.len()));
 
-        if blanks.remove(&pt) {
+        if buf[pt].is_empty() {
+            // queue up all it's neighbors:
+            q.extend(Direction::each().filter_map(|d| buf.area().clip(pt + d)));
+
             let constraints = buf.get_constraints(pt);
             let cell = Cell::from(constraints.random_boxchar(&mut rng));
             buf[pt] = cell;
@@ -90,18 +74,20 @@ fn main_raw_mode(stdout: &mut Stdout) -> Result<()> {
                 .queue(cell.print_styled_content())?
                 .flush()?;
         }
+
+        if rng.random_ratio(1, seeds) {
+            // plant a new seed:
+            q.push(
+                buf.area()
+                    .points()
+                    .filter(|&pt| buf[pt].is_empty())
+                    .choose(&mut rng)
+                    .unwrap(),
+            );
+
+            seeds += 1;
+        }
     }
 
     Ok(())
-}
-
-fn until_some<F, T>(mut f: F) -> T
-where
-    F: FnMut() -> Option<T>,
-{
-    loop {
-        if let Some(v) = f() {
-            return v;
-        }
-    }
 }

@@ -13,9 +13,10 @@ use crate::dirpack::DirPack;
 pub struct Constraints(DirPack<Option<Width>>);
 
 impl Constraints {
-    // pub fn is_constrained(self) -> bool {
-    //     Direction::each().any(|d| self.0[d].is_some())
-    // }
+    #[allow(dead_code)]
+    pub fn is_constrained(self) -> bool {
+        Direction::each().any(|d| self.0[d].is_some())
+    }
 
     pub fn random_boxchar<R: Rng>(self, rng: &mut R) -> BoxChar {
         let any_width = [Width::None, Width::Single, Width::Double];

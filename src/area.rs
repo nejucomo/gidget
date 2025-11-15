@@ -1,5 +1,6 @@
 use derive_more::From;
 use derive_new::new;
+use rand::distr::Distribution;
 
 use crate::pt::Pt;
 
@@ -53,5 +54,11 @@ impl Area {
     fn usizes(self) -> (usize, usize) {
         let Area { width, height } = self;
         (usize::from(width), usize::from(height))
+    }
+}
+
+impl Distribution<Pt> for Area {
+    fn sample<R: rand::Rng + ?Sized>(&self, rng: &mut R) -> Pt {
+        self.ix_to_pt(rng.random_range(0..self.cell_count()))
     }
 }
