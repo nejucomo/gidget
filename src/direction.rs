@@ -1,6 +1,9 @@
 use std::ops::Add;
 
 use Direction::*;
+use rand::Rng;
+use rand::distr::{Distribution, StandardUniform};
+use rand::seq::IndexedRandom as _;
 
 use crate::pt::Pt;
 
@@ -12,9 +15,11 @@ pub enum Direction {
     Right,
 }
 
+const DIRECTIONS: [Direction; 4] = [Up, Down, Left, Right];
+
 impl Direction {
     pub fn each() -> impl Iterator<Item = Direction> {
-        [Up, Down, Left, Right].into_iter()
+        DIRECTIONS.into_iter()
     }
 
     pub fn opposite(self) -> Direction {
@@ -24,6 +29,12 @@ impl Direction {
             Left => Right,
             Right => Left,
         }
+    }
+}
+
+impl Distribution<Direction> for StandardUniform {
+    fn sample<R: Rng + ?Sized>(&self, rng: &mut R) -> Direction {
+        *DIRECTIONS.choose(rng).unwrap()
     }
 }
 

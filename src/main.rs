@@ -8,23 +8,31 @@ mod params;
 mod pt;
 mod scaffold;
 
-use std::collections::VecDeque;
+use std::collections::BTreeSet;
 use std::io::{Result, Stdout, Write as _};
 
 use crossterm::terminal::{
     self, EnterAlternateScreen, LeaveAlternateScreen, disable_raw_mode, enable_raw_mode,
 };
 use crossterm::{QueueableCommand as _, event};
-use rand::distr::{Bernoulli, Distribution as _};
-use rand::seq::SliceRandom as _;
+use rand::Rng as _;
+use rand::seq::IteratorRandom as _;
 
 use crate::buffer::Buffer;
 use crate::cell::Cell;
-use crate::params::NEW_SEED_PROBABILITY;
+use crate::direction::Direction;
 use crate::pt::Pt;
 use crate::scaffold::Scaffold;
 
 fn main() -> Result<()> {
+    println!("Hello.");
+    let r = main_inner();
+    println!("Goodbye?");
+    println!("Result: {:#?}", &r);
+    r
+}
+
+fn main_inner() -> Result<()> {
     Scaffold::new(std::io::stdout())
         .layer(|_| enable_raw_mode(), |_| disable_raw_mode())
         .layer(
@@ -35,46 +43,72 @@ fn main() -> Result<()> {
             |s| s.queue(EnterAlternateScreen).map(|_| ()),
             |s| s.queue(LeaveAlternateScreen).map(|_| ()),
         )
-        .call(raw_mode_main)?;
+        .call(main_raw_mode)?;
 
+    std::io::stdout().flush()?;
     println!("Bye!");
     Ok(())
 }
 
-fn raw_mode_main(stdout: &mut Stdout) -> Result<()> {
-    let seedcoin = Bernoulli::new(NEW_SEED_PROBABILITY).unwrap();
+fn main_raw_mode(stdout: &mut Stdout) -> Result<()> {
     let mut rng = rand::rng();
     let mut buf = Buffer::new(terminal::size()?);
 
-    let mut blanks = VecDeque::from({
-        let mut v: Vec<Pt> = buf.size().iter_area().collect();
-        v.shuffle(&mut rng);
-        v
-    });
-    let mut first = true;
+    let mut blanks: BTreeSet<Pt> = buf.size().iter_area().collect();
+    let mut sprouts: Vec<Pt> = vec![];
+
+    let mut dbglog = "".to_string();
 
     buf.redraw_screen(stdout)?;
-    while !event::poll(params::INTERVAL)? {
-        if let Some(pt) = blanks.pop_front() {
-            let constraints = buf.get_constraints(pt);
-            if !(first || constraints.is_constrained() || seedcoin.sample(&mut rng)) {
-                // We should not create a new seed:
-                blanks.push_back(pt);
-                continue;
-            }
-            first = false;
-
-            let cell = Cell::from(constraints.random_boxchar(&mut rng));
-            buf[pt] = cell;
-
-            stdout
-                .queue(pt.move_to())?
-                .queue(cell.print_styled_content())?
-                .flush()?;
-        } else {
-            return Err(std::io::Error::other("none left"));
+    while !event::poll(params::INTERVAL)? && !blanks.is_empty() {
+        if dbglog.lines().count() > 2 {
+            return Err(std::io::Error::other(dbglog));
         }
+
+        let pt: Pt = until_some::<_, Pt>(|| {
+            if sprouts.is_empty() || rng.random_ratio(1, u32::try_from(sprouts.len()).unwrap() + 1)
+            {
+                // Generate a seed:
+                let pt = *blanks.iter().choose(&mut rng).unwrap();
+                sprouts.push(pt);
+                dbglog += &format!("sprouts: {:?}\n", &sprouts);
+
+                Some(pt)
+            } else {
+                // Attempt to grow a sprout:
+                let sprix = rng.random_range(..sprouts.len());
+                if let Some(pt) =
+                    (sprouts[sprix] + rng.random::<Direction>()).and_then(|pt| buf.size().clip(pt))
+                {
+                    sprouts[sprix] = pt;
+                    Some(pt)
+                } else {
+                    None
+                }
+            }
+        });
+
+        assert!(blanks.remove(&pt));
+        let constraints = buf.get_constraints(pt);
+        let cell = Cell::from(constraints.random_boxchar(&mut rng));
+        buf[pt] = cell;
+
+        stdout
+            .queue(pt.move_to())?
+            .queue(cell.print_styled_content())?
+            .flush()?;
     }
 
     Ok(())
+}
+
+fn until_some<F, T>(mut f: F) -> T
+where
+    F: FnMut() -> Option<T>,
+{
+    loop {
+        if let Some(v) = f() {
+            return v;
+        }
+    }
 }

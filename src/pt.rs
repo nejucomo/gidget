@@ -4,7 +4,7 @@ mod tests;
 use crossterm::cursor::MoveTo;
 use derive_more::{From, Into};
 
-#[derive(Copy, Clone, Debug, From, Into)]
+#[derive(Copy, Clone, Debug, From, Into, Eq, Ord, PartialEq, PartialOrd)]
 pub struct Pt(pub u16, pub u16);
 
 impl Pt {
