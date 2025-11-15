@@ -21,7 +21,7 @@ impl<T> Scaffold<T> {
         self
     }
 
-    pub fn call<F>(self, f: F) -> Result<()>
+    pub fn call<F>(self, f: F) -> Result<T>
     where
         F: FnOnce(&mut T) -> Result<()> + 'static,
     {
@@ -55,6 +55,6 @@ impl<T> Scaffold<T> {
         }
 
         // Return the first error, if any, else ok:
-        firsterr.map(Err).unwrap_or(Ok(()))
+        firsterr.map(Err).unwrap_or(Ok(state))
     }
 }

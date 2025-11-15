@@ -24,16 +24,27 @@ use crate::direction::Direction;
 use crate::pt::Pt;
 use crate::scaffold::Scaffold;
 
-fn main() -> Result<()> {
-    println!("Hello.");
-    let r = main_inner();
-    println!("Goodbye?");
-    println!("Result: {:#?}", &r);
-    r
+macro_rules! sdbg {
+    ($s:expr, $val:expr) => {
+        match $val {
+            tmp => {
+                $s += &format!(
+                    "[{}:{}:{}] {} = {:#?}\n",
+                    std::file!(),
+                    std::line!(),
+                    std::column!(),
+                    std::stringify!($val),
+                    &tmp
+                );
+                tmp
+            }
+        }
+    };
 }
 
-fn main_inner() -> Result<()> {
-    Scaffold::new(std::io::stdout())
+fn main() -> Result<()> {
+    let r = Scaffold::new(std::io::stdout())
+        .layer(|_| Ok(()), |s| s.flush())
         .layer(|_| enable_raw_mode(), |_| disable_raw_mode())
         .layer(
             |s| s.queue(EnterAlternateScreen).map(|_| ()),
@@ -43,11 +54,18 @@ fn main_inner() -> Result<()> {
             |s| s.queue(EnterAlternateScreen).map(|_| ()),
             |s| s.queue(LeaveAlternateScreen).map(|_| ()),
         )
-        .call(main_raw_mode)?;
+        .call(main_raw_mode);
 
-    std::io::stdout().flush()?;
-    println!("Bye!");
-    Ok(())
+    match r {
+        Ok(mut stdout) => {
+            writeln!(stdout, "Bye!")?;
+            Ok(())
+        }
+        Err(e) => {
+            eprintln!("Error:\n{e}");
+            Err(e)
+        }
+    }
 }
 
 fn main_raw_mode(stdout: &mut Stdout) -> Result<()> {
@@ -61,29 +79,34 @@ fn main_raw_mode(stdout: &mut Stdout) -> Result<()> {
 
     buf.redraw_screen(stdout)?;
     while !event::poll(params::INTERVAL)? && !blanks.is_empty() {
-        if dbglog.lines().count() > 2 {
+        if dbglog.lines().count() > 15 {
             return Err(std::io::Error::other(dbglog));
         }
 
         let pt: Pt = until_some::<_, Pt>(|| {
-            if sprouts.is_empty() || rng.random_ratio(1, u32::try_from(sprouts.len()).unwrap() + 1)
-            {
+            let denom = u32::try_from(sprouts.len()).unwrap() + 1;
+            sdbg!(dbglog, denom);
+            let gen_sprout = rng.random_ratio(1, denom);
+            sdbg!(dbglog, gen_sprout);
+            if gen_sprout {
                 // Generate a seed:
-                let pt = *blanks.iter().choose(&mut rng).unwrap();
-                sprouts.push(pt);
-                dbglog += &format!("sprouts: {:?}\n", &sprouts);
-
-                Some(pt)
+                let newsprout = *blanks.iter().choose(&mut rng).unwrap();
+                sdbg!(dbglog, newsprout);
+                sprouts.push(newsprout);
+                Some(newsprout)
             } else {
                 // Attempt to grow a sprout:
                 let sprix = rng.random_range(..sprouts.len());
+                sdbg!(dbglog, sprix);
+                sdbg!(dbglog, sprouts[sprix]);
                 if let Some(pt) =
                     (sprouts[sprix] + rng.random::<Direction>()).and_then(|pt| buf.size().clip(pt))
                 {
+                    sdbg!(dbglog, pt);
                     sprouts[sprix] = pt;
                     Some(pt)
                 } else {
-                    None
+                    sdbg!(dbglog, None)
                 }
             }
         });
