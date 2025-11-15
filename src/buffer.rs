@@ -55,11 +55,12 @@ impl Buffer {
     pub fn redraw_screen(&self, stdout: &mut Stdout) -> Result<()> {
         stdout.queue(Clear(All))?;
 
-        let lastrow = None;
+        let mut lastrow = None;
         for (pt, c) in self.iter() {
             if lastrow != Some(pt.1) {
                 // First column on this row; move cursor:
                 stdout.queue(pt.move_to())?;
+                lastrow = Some(pt.1);
             }
             stdout.queue(c.print_styled_content())?;
         }

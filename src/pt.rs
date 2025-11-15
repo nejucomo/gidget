@@ -1,3 +1,6 @@
+#[cfg(test)]
+mod tests;
+
 use crossterm::cursor::MoveTo;
 use derive_more::{From, Into};
 
@@ -16,9 +19,9 @@ impl Pt {
     }
 
     pub fn ix_to_pt(self, ix: usize) -> Pt {
-        let Pt(w, h) = self;
-        let col = ix % usize::from(w);
-        let row = ix / usize::from(h);
+        let (w, _): (usize, usize) = self.into();
+        let col = ix % w;
+        let row = ix / w;
         (col, row).try_into().unwrap()
     }
 
